@@ -2,6 +2,82 @@ use nom::bytes::complete::{tag, take_until};
 use nom::character::complete::{digit1, line_ending, space1};
 use nom::multi::separated_list1;
 use nom::IResult;
+use std::collections::{HashMap, HashSet};
+
+// NON-DETERMINISTIC FINITE AUTOMATA METHOD
+
+#[derive(Debug, PartialEq)]
+struct Nfa {
+    q: HashSet<u32>,                           // set of states
+    sigma: HashSet<char>,                      // set of symbols
+    delta: HashMap<(u32, char), HashSet<u32>>, // set of transition relations
+    s: HashSet<u32>,                           // set of initial states
+    f: HashSet<u32>,                           // set of final states
+    sc: Vec<u32>,                              // state counter
+}
+
+impl Nfa {
+    fn new(
+        q: HashSet<u32>,
+        sigma: HashSet<char>,
+        delta: HashMap<(u32, char), HashSet<u32>>,
+        s: HashSet<u32>,
+        f: HashSet<u32>,
+    ) -> Self {
+        Self {
+            q: q.clone(),
+            sigma,
+            delta,
+            s,
+            f,
+            sc: vec![0; q.len()],
+        }
+    }
+
+    fn do_delta(&mut self, q: u32, x: char, counts_snapshot: &Vec<u32>) -> HashSet<u32> {
+        match self.delta.get(&(q, x)) {
+            Some(set) => {
+                let curr_set_count = counts_snapshot[q as usize];
+                if set.len() == 1 && !set.contains(&q) {
+                    self.sc[*set.iter().nth(0).unwrap() as usize] += curr_set_count;
+                    self.sc[q as usize] -= curr_set_count;
+                } else if set.len() > 1 {
+                    let non_self_indices: Vec<_> = set.iter().filter(|&x| x != &q).collect();
+                    for &non_self_index in non_self_indices {
+                        self.sc[non_self_index as usize] += curr_set_count;
+                    }
+                    if !set.contains(&q) {
+                        self.sc[q as usize] -= curr_set_count;
+                    }
+                } else if set.is_empty() {
+                    self.sc[q as usize] -= curr_set_count;
+                }
+                set.clone()
+            }
+            None => HashSet::new(),
+        }
+    }
+
+    fn run(&mut self, word: &str) -> bool {
+        self.sc[0] += 1; // initialise the initial position
+        let mut p = self.s.clone();
+        for chr in word.chars() {
+            let mut p_new: HashSet<_> = HashSet::new();
+            let counts_snapshot = self.sc.clone();
+            for q in &p {
+                let next_states = self.do_delta(*q, chr, &counts_snapshot);
+                p_new.extend(next_states);
+            }
+            p = p_new;
+        }
+        let intersection: HashSet<_> = self.f.intersection(&p).collect();
+        !intersection.is_empty()
+    }
+
+    fn get_final_state_count(&self) -> u32 {
+        self.sc[self.sc.len() - 2] + self.sc[self.sc.len() - 1]
+    }
+}
 
 fn main() {
     let input = include_str!("input1.txt");
@@ -10,71 +86,64 @@ fn main() {
 }
 
 fn part1(input: &str) -> String {
-    let result = parse_lines(input).unwrap().1;
-    let mut answer = 0u32;
-    for r in result {
-        answer += find_combinations(r.0, r.1).len() as u32;
+    let mut result = 0;
+    let results = parse_lines(input).unwrap().1;
+    for (springs, groups) in results {
+        let nodes = build_nodes(groups);
+        let mut nfa = build_nfa(&nodes);
+        let _ = nfa.run(springs);
+        result += nfa.get_final_state_count();
     }
-    answer.to_string()
+    result.to_string()
 }
 
-fn find_combinations(string: &str, groups: Vec<u32>) -> Vec<String> {
-    let num_of_wildcards = count_wildcards(string);
-    let wildcard_replacements = get_wildcard_replacements(num_of_wildcards);
-    let valid_answers = find_valid_replacements(wildcard_replacements, string, groups);
-    valid_answers
-}
-
-fn find_valid_replacements(
-    replacements: Vec<String>,
-    scenario: &str,
-    groups: Vec<u32>,
-) -> Vec<String> {
-    let mut valid = vec![];
-    for replacement in replacements {
-        let mut replacement_chars = replacement.chars();
-        let x = scenario.split('?').fold(String::new(), |mut acc, part| {
-            acc.push_str(part);
-            if let Some(replacement) = replacement_chars.next() {
-                acc.push(replacement);
+fn build_nfa(nodes: &String) -> Nfa {
+    let mut delta: HashMap<(u32, char), HashSet<u32>> = HashMap::new();
+    for (idx, chr) in nodes.chars().enumerate() {
+        if chr == '.' {
+            delta.insert((idx as u32, '.'), HashSet::from([idx as u32]));
+            if idx == nodes.len() - 1 {
+                delta.insert((idx as u32, '#'), HashSet::new());
+                delta.insert((idx as u32, '?'), HashSet::from([idx as u32]));
+            } else {
+                delta.insert((idx as u32, '#'), HashSet::from([idx as u32 + 1]));
+                delta.insert(
+                    (idx as u32, '?'),
+                    HashSet::from([idx as u32, idx as u32 + 1]),
+                );
             }
-            acc
-        });
-        if count_consecutives(x.as_str()) == groups {
-            valid.push(x);
+        } else if chr == '#' {
+            delta.insert((idx as u32, '?'), HashSet::from([idx as u32 + 1]));
+            if nodes.chars().nth(idx + 1).unwrap() == '.' {
+                delta.insert((idx as u32, '.'), HashSet::from([idx as u32 + 1]));
+                delta.insert((idx as u32, '#'), HashSet::new());
+            } else if nodes.chars().nth(idx + 1).unwrap() == '#' {
+                delta.insert((idx as u32, '#'), HashSet::from([idx as u32 + 1]));
+                delta.insert((idx as u32, '.'), HashSet::new());
+            }
+        } else if chr == '?' {
+            delta.insert((idx as u32, '.'), HashSet::from([idx as u32 + 1]));
+            delta.insert((idx as u32, '#'), HashSet::from([idx as u32 + 1]));
         }
     }
-    valid
+    Nfa::new(
+        HashSet::from_iter(0..nodes.len() as u32),
+        HashSet::from(['.', '#', '?']),
+        delta,
+        HashSet::from([0]),
+        HashSet::from([nodes.len() as u32 - 2, nodes.len() as u32 - 1]),
+    )
 }
 
-fn get_wildcard_replacements(num_wildcards: u32) -> Vec<String> {
-    let mut replacements = vec![];
-    let end_num = 2_i32.pow(num_wildcards);
-    for n in 0..end_num {
-        let mut bin_str = format!("{:b}", n);
-        while bin_str.len() < num_wildcards as usize {
-            bin_str = "0".to_owned() + &*bin_str;
+fn build_nodes(groups: Vec<u32>) -> String {
+    let mut group_string = String::from(".");
+    for group in groups {
+        for _ in 0..group {
+            group_string.push('#');
         }
-        bin_str = bin_str.replace('0', ".").replace('1', "#");
-        replacements.push(bin_str);
+        group_string.push('.');
     }
-    replacements
-}
-
-fn count_wildcards(string: &str) -> u32 {
-    string
-        .chars()
-        .filter(|&c| c == '?')
-        .collect::<Vec<_>>()
-        .len() as u32
-}
-
-fn count_consecutives(input: &str) -> Vec<u32> {
-    input
-        .split('.')
-        .filter(|&s| !s.is_empty())
-        .map(|x| x.len() as u32)
-        .collect()
+    group_string
 }
 
 fn parse_lines(input: &str) -> IResult<&str, Vec<(&str, Vec<u32>)>> {
@@ -84,7 +153,6 @@ fn parse_lines(input: &str) -> IResult<&str, Vec<(&str, Vec<u32>)>> {
 }
 
 fn parse_line(input: &str) -> IResult<&str, (&str, Vec<u32>)> {
-    // let (input, springs) = many1(alt((tag("."), tag("#"), tag("?"))))(input)?;
     let (input, springs) = take_until(" ")(input)?;
     let (input, _) = space1(input)?;
     let (input, damaged) = separated_list1(tag(","), digit1)(input)?;
@@ -101,6 +169,65 @@ fn parse_line(input: &str) -> IResult<&str, (&str, Vec<u32>)> {
 mod tests {
     use super::*;
     // 21 = 1 + 4 + 1 + 1 + 4 + 10
+
+    #[test]
+    fn test_run_nfa() {
+        let expected = 4;
+        let nodes = build_nodes(vec![1, 3]);
+        let mut nfa = build_nfa(&nodes);
+        let _ = nfa.run(".??..?##?");
+        let result = nfa.get_final_state_count();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_build_nfa() {
+        let expected = Nfa::new(
+            HashSet::from([0, 1, 2, 3, 4, 5, 6]),
+            HashSet::from(['.', '#', '?']),
+            HashMap::from([
+                ((0, '.'), HashSet::from([0])),
+                ((0, '#'), HashSet::from([1])),
+                ((0, '?'), HashSet::from([0, 1])),
+                ((1, '.'), HashSet::from([2])),
+                ((1, '#'), HashSet::new()),
+                ((1, '?'), HashSet::from([2])),
+                ((2, '.'), HashSet::from([2])),
+                ((2, '#'), HashSet::from([3])),
+                ((2, '?'), HashSet::from([2, 3])),
+                ((3, '.'), HashSet::new()),
+                ((3, '#'), HashSet::from([4])),
+                ((3, '?'), HashSet::from([4])),
+                ((4, '.'), HashSet::new()),
+                ((4, '#'), HashSet::from([5])),
+                ((4, '?'), HashSet::from([5])),
+                ((5, '.'), HashSet::from([6])),
+                ((5, '#'), HashSet::new()),
+                ((5, '?'), HashSet::from([6])),
+                ((6, '.'), HashSet::from([6])),
+                ((6, '#'), HashSet::new()),
+                ((6, '?'), HashSet::from([6])),
+            ]),
+            HashSet::from([0]),
+            HashSet::from([5, 6]),
+        );
+        let result = build_nfa(&".#.###.".to_string());
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_build_nodes_1() {
+        let expected = ".#.#.###.".to_string();
+        let result = build_nodes(vec![1, 1, 3]);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_build_nodes_2() {
+        let expected = ".#.###.#.######.".to_string();
+        let result = build_nodes(vec![1, 3, 1, 6]);
+        assert_eq!(result, expected);
+    }
 
     #[test]
     fn test_part1() {
@@ -159,162 +286,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_combinations1() {
-        let expected = vec![String::from("#.#.###")];
-        let result = find_combinations("???.###", vec![1u32, 1, 3]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_find_combinations2() {
-        let expected = vec![
-            String::from("..#...#...###."),
-            String::from("..#..#....###."),
-            String::from(".#....#...###."),
-            String::from(".#...#....###."),
-        ];
-        let result = find_combinations(".??..??...?##.", vec![1u32, 1, 3]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_find_combinations3() {
-        let expected = vec![String::from(".#.###.#.######")];
-        let result = find_combinations("?#?#?#?#?#?#?#?", vec![1u32, 3, 1, 6]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_find_combinations4() {
-        let expected = vec![String::from("####.#...#...")];
-        let result = find_combinations("????.#...#...", vec![4u32, 1, 1]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_find_combinations5() {
-        let expected = vec![
-            String::from("...#.######..#####."),
-            String::from("..#..######..#####."),
-            String::from(".#...######..#####."),
-            String::from("#....######..#####."),
-        ];
-        let result = find_combinations("????.######..#####.", vec![1u32, 6, 5]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_find_combinations6() {
-        let expected = vec![
-            String::from(".###....##.#"),
-            String::from(".###...##..#"),
-            String::from(".###...##.#."),
-            String::from(".###..##...#"),
-            String::from(".###..##..#."),
-            String::from(".###..##.#.."),
-            String::from(".###.##....#"),
-            String::from(".###.##...#."),
-            String::from(".###.##..#.."),
-            String::from(".###.##.#..."),
-        ];
-        let result = find_combinations("?###????????", vec![3u32, 2, 1]);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_get_wildcard_replacements() {
-        let expected = vec!["...", "..#", ".#.", ".##", "#..", "#.#", "##.", "###"];
-        let result = get_wildcard_replacements(3);
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_wildcards1() {
-        let expected = 3u32;
-        let result = count_wildcards("???.###");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_wildcards2() {
-        let expected = 5u32;
-        let result = count_wildcards(".??..??...?##.");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_wildcards3() {
-        let expected = 8u32;
-        let result = count_wildcards("?#?#?#?#?#?#?#?");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_wildcards4() {
-        let expected = 4u32;
-        let result = count_wildcards("????.#...#...");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_wildcards5() {
-        let expected = 4u32;
-        let result = count_wildcards("????.######..#####.");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_wildcards6() {
-        let expected = 9u32;
-        let result = count_wildcards("?###????????");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_consecutives1() {
-        let expected = vec![1u32, 1, 3];
-        let result = count_consecutives("#.#.###");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_consecutives2() {
-        let expected = vec![1u32, 1, 3];
-        let result = count_consecutives(".#...#....###.");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_consecutives3() {
-        let expected = vec![1u32, 3, 1, 6];
-        let result = count_consecutives(".#.###.#.######");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_consecutives4() {
-        let expected = vec![4u32, 1, 1];
-        let result = count_consecutives("####.#...#...");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_consecutives5() {
-        let expected = vec![1u32, 6, 5];
-        let result = count_consecutives("#....######..#####.");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_count_consecutives6() {
-        let expected = vec![3u32, 2, 1];
-        let result = count_consecutives(".###.##....#");
-        assert_eq!(result, expected);
-    }
-
-    #[test]
     fn test_parse_line1() {
-        // let expected = (vec!["?", "?", "?", ".", "#", "#", "#"], vec![1, 1, 3]);
         let expected = ("???.###", vec![1, 1, 3]);
         let result = parse_line("???.### 1,1,3");
         assert_eq!(result.unwrap().1, expected);
@@ -322,64 +294,35 @@ mod tests {
 
     #[test]
     fn test_parse_line2() {
-        let expected = (
-            // vec![
-            //     ".", "?", "?", ".", ".", "?", "?", ".", ".", ".", "?", "#", "#", ".",
-            // ],
-            ".??..??...?##.",
-            vec![1, 1, 3],
-        );
+        let expected = (".??..??...?##.", vec![1, 1, 3]);
         let result = parse_line(".??..??...?##. 1,1,3");
         assert_eq!(result.unwrap().1, expected);
     }
 
     #[test]
     fn test_parse_line3() {
-        let expected = (
-            // vec![
-            //     "?", "#", "?", "#", "?", "#", "?", "#", "?", "#", "?", "#", "?", "#", "?",
-            // ],
-            "?#?#?#?#?#?#?#?",
-            vec![1, 3, 1, 6],
-        );
+        let expected = ("?#?#?#?#?#?#?#?", vec![1, 3, 1, 6]);
         let result = parse_line("?#?#?#?#?#?#?#? 1,3,1,6");
         assert_eq!(result.unwrap().1, expected);
     }
 
     #[test]
     fn test_parse_line4() {
-        let expected = (
-            // vec![
-            //     "?", "?", "?", "?", ".", "#", ".", ".", ".", "#", ".", ".", ".",
-            // ],
-            "????.#...#...",
-            vec![4, 1, 1],
-        );
+        let expected = ("????.#...#...", vec![4, 1, 1]);
         let result = parse_line("????.#...#... 4,1,1");
         assert_eq!(result.unwrap().1, expected);
     }
 
     #[test]
     fn test_parse_line5() {
-        let expected = (
-            // vec![
-            //     "?", "?", "?", "?", ".", "#", "#", "#", "#", "#", "#", ".", ".", "#", "#", "#",
-            //     "#", "#", ".",
-            // ],
-            "????.######..#####.",
-            vec![1, 6, 5],
-        );
+        let expected = ("????.######..#####.", vec![1, 6, 5]);
         let result = parse_line("????.######..#####. 1,6,5");
         assert_eq!(result.unwrap().1, expected);
     }
 
     #[test]
     fn test_parse_line6() {
-        let expected = (
-            // vec!["?", "#", "#", "#", "?", "?", "?", "?", "?", "?", "?", "?"],
-            "?###????????",
-            vec![3, 2, 1],
-        );
+        let expected = ("?###????????", vec![3, 2, 1]);
         let result = parse_line("?###???????? 3,2,1");
         assert_eq!(result.unwrap().1, expected);
     }
