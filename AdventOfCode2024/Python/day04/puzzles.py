@@ -35,7 +35,7 @@ def part1(data):
     for y in range(3, 3 + height):
         for x in range(3, 3 + width):
             total += count_xmasses_at_cell(data, y, x)
-    return total / 2    # occurrences are counted twice!
+    return total // 2    # occurrences are counted twice!
 
 
 def part2(data):
@@ -73,9 +73,14 @@ def parse_data2(data):
 
 
 def run_puzzles(data):
+    import time
+
     parsed_data = parse_data(data)
+    start_time = time.time()
     answer1 = part1(parsed_data)
-    print("DAY 04, PART 1 RESULT: ", answer1)
+    print(f"DAY 04, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
+
     parsed_data2 = parse_data2(data)
+    start_time = time.time()
     answer2 = part2(parsed_data2)
-    print("DAY 04, PART 2 RESULT: ", answer2)
+    print(f"DAY 04, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")

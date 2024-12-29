@@ -59,7 +59,7 @@ def part1(a, b, c, prog, as_list=False):
 
 
 def part2(_, b, c, prog):
-    power = 15  # pow(8, 15) is the minimum number required to create a 16-digit output
+    power = 15  # pow(8, 15) is the minimum number required to create a 16-digit output, so start from here
     digits = [0 for _ in range(power + 1)]
     backtrack_digits = [-1 for _ in range(power + 1)]   # used for when we can't get a match for all digits[]
     while power >= 0:
@@ -102,9 +102,14 @@ def parse_data(data):
 
 
 def run_puzzles(data):
+    import time
+
     a, b, c, prog = parse_data(data)
+    start_time = time.time()
     answer1 = part1(a, b, c, prog)
-    print(f"DAY 17, PART 1 RESULT: \033[92m{answer1}\033[0m")
+    print(f"DAY 17, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
+
     a, b, c, prog = parse_data(data)
+    start_time = time.time()
     answer2 = part2(a, b, c, prog)
-    print(f"DAY 17, PART 2 RESULT: \033[92m{answer2}\033[0m")
+    print(f"DAY 17, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")

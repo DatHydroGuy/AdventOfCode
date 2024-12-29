@@ -33,7 +33,7 @@ def evaluate_equation(equation):
     return total
 
 
-def part1(data, number_of_operators):
+def run(data, number_of_operators):
     total = 0
     for data_line in data:
         result, values = data_line
@@ -59,8 +59,13 @@ def parse_data(raw_data):
 
 
 def run_puzzles(data):
+    import time
+
     parsed_data = parse_data(data)
-    answer1 = part1(parsed_data, 2)
-    print("DAY 07, PART 1 RESULT: ", answer1)
-    answer2 = part1(parsed_data, 3)
-    print("DAY 07, PART 2 RESULT: ", answer2)
+    start_time = time.time()
+    answer1 = run(parsed_data, 2)
+    print(f"DAY 07, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
+
+    start_time = time.time()
+    answer2 = run(parsed_data, 3)
+    print(f"DAY 07, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")

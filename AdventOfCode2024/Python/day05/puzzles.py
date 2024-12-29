@@ -82,9 +82,13 @@ def parse_data(data):
 
 
 def run_puzzles(data):
-    rules1, updates1 = parse_data(data)
-    answer1 = part1(rules1, updates1)
-    print("DAY 05, PART 1 RESULT: ", answer1)
-    rules2, updates2 = parse_data(data)
-    answer2 = part2(rules2, updates2)
-    print("DAY 05, PART 2 RESULT: ", answer2)
+    import time
+
+    rules, updates = parse_data(data)
+    start_time = time.time()
+    answer1 = part1(rules, updates)
+    print(f"DAY 05, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
+
+    start_time = time.time()
+    answer2 = part2(rules, updates)
+    print(f"DAY 05, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")

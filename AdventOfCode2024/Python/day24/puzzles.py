@@ -100,10 +100,14 @@ def parse_data(raw_data):
 
 
 def run_puzzles(data):
+    import time
+
     wires, gates = parse_data(data)
+    start_time = time.time()
     answer1 = part1(wires)
-    print(f"DAY 24, PART 1 RESULT: \033[92m{answer1}\033[0m")
-    # parsed_data2 = parse_data2(data)
+    print(f"DAY 24, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
+
+    start_time = time.time()
     part2(wires, gates)
-    answer2 = "gbf,hdt,jgt,mht,nbf,z05,z09,z30"
-    print(f"DAY 24, PART 2 RESULT: \033[92m{answer2}\033[0m")
+    answer2 = "gbf,hdt,jgt,mht,nbf,z05,z09,z30"     # found through manual inspection of graph.pdf
+    print(f"DAY 24, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")

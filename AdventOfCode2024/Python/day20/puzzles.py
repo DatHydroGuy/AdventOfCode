@@ -20,8 +20,6 @@ def find_cells_by_manhattan_distance(path_cells, cheat_distance, minimum_saving)
         for idx2 in range(idx + 1, len(path_cells)):
             pos2, dist2 = path_cells[idx2]
             path_dist = abs(dist1 - dist2)
-            # if path_dist < cheat_distance:
-            #     continue    # don't waste time evaluating neighbouring cells on the path
 
             manhattan_distance = abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
             saving = path_dist - manhattan_distance
@@ -84,6 +82,7 @@ def bfs(grid, start, end):
 
     return sorted(path_cells.items(), key=lambda x: x[1])
 
+
 def part2(grid):
     start, end = get_start_and_end_positions(grid)
     path_cells = bfs(grid, start, end)
@@ -100,10 +99,10 @@ def parse_data(raw_data):
 
 def run_puzzles(data):
     import time
-    start_time = time.time()
     parsed_data = parse_data(data)
+    start_time = time.time()
     answer1 = part1(parsed_data)
-    print(f"DAY 20, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.2f} seconds)\033[0m")
+    print(f"DAY 20, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
     start_time = time.time()
     answer2 = part2(parsed_data)
-    print(f"DAY 20, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.2f} seconds)\033[0m")
+    print(f"DAY 20, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")

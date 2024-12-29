@@ -54,10 +54,10 @@ def parse_data(raw_data):
 
 def run_puzzles(data):
     import time
-    start_time = time.time()
     towels, patterns = parse_data(data)
+    start_time = time.time()
     answer1, memo = part1(towels, patterns)
-    print(f"DAY 19, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.2f} seconds)\033[0m")
+    print(f"DAY 19, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
     start_time = time.time()
     answer2 = part2(towels, patterns, memo)
-    print(f"DAY 19, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.2f} seconds)\033[0m")
+    print(f"DAY 19, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")

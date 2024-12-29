@@ -168,9 +168,14 @@ def parse_data(raw_data):
 
 
 def run_puzzles(data):
+    import time
+
     grid, moves = parse_data(data)
+    start_time = time.time()
     answer1 = part1(grid, moves)
-    print("DAY 15, PART 1 RESULT: ", answer1)
+    print(f"DAY 15, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
+
     grid, moves = parse_data(data)
+    start_time = time.time()
     answer2 = part2(grid, moves)
-    print("DAY 15, PART 2 RESULT: ", answer2)
+    print(f"DAY 15, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")

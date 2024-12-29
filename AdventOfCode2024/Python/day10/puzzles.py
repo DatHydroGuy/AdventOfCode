@@ -29,7 +29,7 @@ def find_trail_ends(grid):
     return trail_ends
 
 
-def part1(grid):
+def run(grid):
     trail_heads = find_trail_heads(grid)
     unique_trail_heads = find_unique_trail_heads(grid)
     trail_ends = find_trail_ends(grid)
@@ -69,7 +69,12 @@ def parse_data(data):
 
 
 def run_puzzles(data):
+    import time
+
     parsed_data = parse_data(data)
-    answer1, answer2 = part1(parsed_data)
-    print("DAY 10, PART 1 RESULT: ", answer1)
-    print("DAY 10, PART 2 RESULT: ", answer2)
+    start_time = time.time()
+    answer1, answer2 = run(parsed_data)
+    print(f"DAY 10, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
+
+    start_time = time.time()
+    print(f"DAY 10, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")

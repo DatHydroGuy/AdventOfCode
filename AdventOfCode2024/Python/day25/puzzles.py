@@ -10,10 +10,6 @@ def part1(locks, keys, max_sum):
     return answer
 
 
-def part2(data):
-    return None
-
-
 def parse_data(raw_data):
     schematics = parse_schematics(raw_data)
     locks = np.array([l for l in schematics if all([c == '#' for c in l[0]])])
@@ -43,14 +39,14 @@ def parse_schematics(raw_data):
     return schematics
 
 
-def parse_data2(raw_data):
-    return 0
-
-
 def run_puzzles(data):
+    import time
+
     locks, keys, max_sum = parse_data(data)
+    start_time = time.time()
     answer1 = part1(locks, keys, max_sum)
-    print(f"DAY 25, PART 1 RESULT: \033[92m{answer1}\033[0m")
-    parsed_data2 = parse_data2(data)
-    answer2 = part2(parsed_data2)
-    print(f"DAY 25, PART 2 RESULT: \033[92m{answer2}\033[0m")
+    print(f"DAY 25, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
+
+    start_time = time.time()
+    answer2 = "MERRY CHRISTMAS!"    # There is no part 2 :)
+    print(f"DAY 25, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")

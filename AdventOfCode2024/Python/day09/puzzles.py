@@ -10,7 +10,7 @@ def calculate_disk_checksum(disk_map):
         if element[0] != -1:
             total += element[0] * sum_from_a_to_b(pointer - 1, pointer + element[1] - 1)
         pointer += element[1]
-    return total
+    return int(total)
 
 
 def sum_from_a_to_b(a, b):
@@ -114,9 +114,14 @@ def parse_data(data):
 
 
 def run_puzzles(data):
+    import time
+
     parsed_data = parse_data(data)
+    start_time = time.time()
     answer1 = part1(parsed_data)
-    print("DAY 09, PART 1 RESULT: ", answer1)
+    print(f"DAY 09, PART 1 RESULT: \033[91m{answer1} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
+
     parsed_data2 = parse_data(data)
+    start_time = time.time()
     answer2 = part2(parsed_data2)
-    print("DAY 09, PART 2 RESULT: ", answer2)
+    print(f"DAY 09, PART 2 RESULT: \033[91m{answer2} \033[92m({time.time() - start_time:.5f} seconds)\033[0m")
